@@ -31,9 +31,11 @@ void main() {
   if (fields contains "OFFENSE") { checked = "checked"; } else { checked = ""; }
   write("<input type='checkbox' name='OFFENSE' value='t' " + checked + " />Offense");
   if (fields contains "DEFENSE") { checked = "checked"; } else { checked = ""; }
-  write("<input type='checkbox' name='DEFENSE' value='t' " + checked + " />Defense");
+  write("<input type='checkbox' name='DEFENSE' value='t' " + checked + " />Defense<br>");
+  write("Restrict to player: <input type='text' name='PLAYER_RESTRICT' value='" +
+	fields["PLAYER_RESTRICT"] + "' size=10 /></br>");
 
-  write("<br><input type='submit' value='Recalculate'/></form>");
+  write("<input type='submit' value='Recalculate'/></form>");
 
   write(process(fields));
 

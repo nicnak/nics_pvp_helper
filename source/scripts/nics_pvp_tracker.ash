@@ -7,7 +7,7 @@ string contestPattern = "<tr[a-zA-Z0-9/=\":. ]*?>\s*?<td[a-zA-Z0-9/=\":. ]*?>\s*
 string marginPattern = ".*?(\\d+%*).*?";
 string this_player = to_lower_case(my_name());
 string greeting = "<p>Welcome to <a href=\"showplayer.php\?who=1655960\">NicNak</a>'s PVP tracker. Credit to <a href=\"showplayer.php\?who=2205257\">Vhaeraun<a> for his great bookkeeper script which I snagged some bits of code from.";
-string file_name_base = this_player + "_nics_pvp_tracker_v1_";
+string file_name_base = this_player + "_nics_pvp_tracker_";
 
 record WltStat {
   int count;  // win + loss + tie
@@ -245,8 +245,14 @@ string process(string[string] fields) {
     string fightId = group(logMatcher,2);
     string fightResults = group(logMatcher,3);
 
-    if(!(storedFights contains fightId)){
+    if (!(storedFights contains fightId)) {
       storedFights[fightId] = processFight(oneFight);
+    }
+    string playerRestrict = to_lower_case(fields["PLAYER_RESTRICT"]);
+    if (playerRestrict != "" &&
+	playerRestrict != storedFights[fightId].attacker &&
+	playerRestrict != storedFights[fightId].defender) {
+      continue;
     }
     evaluateStoredFight(storedFights[fightId]);
   }
