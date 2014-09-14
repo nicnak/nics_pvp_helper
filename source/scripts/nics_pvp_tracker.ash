@@ -6,7 +6,8 @@ string playersPattern = "<a href=\"showplayer.php\\?who=\\d+\"><b>(.*?)</b></a> 
 string contestPattern = "<tr[a-zA-Z0-9/=\":. ]*?>\s*?<td[a-zA-Z0-9/=\":. ]*?>\s*?(<img[a-zA-Z0-9/=\":. _]*?>)?\s*?</td>.*?<center>\s*?Round \\d+: <b[a-zA-Z0-9/=\":. ]*?>(.*?)</b>\s*?<div[a-zA-Z0-9/=\":. ]*?>.*?</div>\s*?</center>\s*?<p>(.*?)</td>\s*?<td[a-zA-Z0-9/=\":. ]*?>\s*?(<img[a-zA-Z0-9/=\":. _]*?>)?\s*?</td>\s*?</tr>";
 string marginPattern = ".*?(\\d+%*).*?";
 string this_player = to_lower_case(my_name());
-string greeting = "<H1 style='color:red'>Beta version - 20140913.</H1><p>Welcome to <a href=\"showplayer.php\?who=1655960\">NicNak</a>'s PVP tracker. Credit to <a href=\"showplayer.php\?who=2205257\">Vhaeraun<a> for his great bookkeeper script which I snagged some bits of code from.";
+string greeting = "<p>Welcome to <a href=\"showplayer.php\?who=1655960\">NicNak</a>'s PVP tracker. Credit to <a href=\"showplayer.php\?who=2205257\">Vhaeraun<a> for his great bookkeeper script which I snagged some bits of code from.";
+string file_name_base = this_player + "_nics_pvp_tracker_v1_";
 
 record WltStat {
   int count;  // win + loss + tie
@@ -139,7 +140,7 @@ string formatResults(string[string] fields){
   return html;
 }
 
-WltStat incrementWltStat(WltStat s, StoredRound thisRound) {
+void incrementWltStat(WltStat s, StoredRound thisRound) {
   if (thisRound.win) {
     s.win = s.win + 1;
   }
@@ -150,7 +151,6 @@ WltStat incrementWltStat(WltStat s, StoredRound thisRound) {
     s.tie = s.tie + 1;
   }
   s.count = s.count + 1;
-  return s;
 }
 
 StoredFight processFight(string url) {
@@ -209,9 +209,9 @@ void evaluateStoredFight(StoredFight thisFight) {
     StoredRound thisRound = thisFight.rounds[key];
     MiniStat mStat = player_stat.minis[thisRound.mini];
     if(thisFight.attacking) {
-      mStat.offense = incrementWltStat(mStat.offense, thisRound);
+      incrementWltStat(mStat.offense, thisRound);
     } else {
-      mStat.defense = incrementWltStat(mStat.defense, thisRound);
+      incrementWltStat(mStat.defense, thisRound);
     }
     player_stat.minis[thisRound.mini] = mStat;
   }
@@ -221,9 +221,9 @@ void evaluateStoredFight(StoredFight thisFight) {
   tempFight.win = thisFight.won;
   tempFight.loss = !thisFight.won;
   if(thisFight.attacking){
-    player_stat.overall.offense = incrementWltStat(player_stat.overall.offense, tempFight);
+    incrementWltStat(player_stat.overall.offense, tempFight);
   } else {
-    player_stat.overall.defense = incrementWltStat(player_stat.overall.defense, tempFight);
+    incrementWltStat(player_stat.overall.defense, tempFight);
   }
 }
 
@@ -231,7 +231,7 @@ string process(string[string] fields) {
   verifySettings();
   int maxFights = to_int(fields["MAX_FIGHTS"]);
 
-  string fileName = this_player + "_nics_pvp_tracker_" + getCurrentSeason() + ".txt";
+  string fileName = file_name_base + getCurrentSeason() + ".txt";
   StoredFight [string] storedFights;
   file_to_map(fileName, storedFights);
 
@@ -244,7 +244,7 @@ string process(string[string] fields) {
     string oneFight = group(logMatcher,1);
     string fightId = group(logMatcher,2);
     string fightResults = group(logMatcher,3);
-		
+
     if(!(storedFights contains fightId)){
       storedFights[fightId] = processFight(oneFight);
     }
@@ -259,11 +259,27 @@ string process(string[string] fields) {
   return page;
 }
 
-void main(int maxFights){
+string[string] readPrefs() {
+  string fileName = file_name_base + "prefs.txt";
   string[string] fields;
+  file_to_map(fileName, fields);
+  if (!(fields contains "MAX_FIGHTS")) {
+    // defaults
+    fields["MAX_FIGHTS"] = 1000;
+    fields["TOTAL"] = "t";
+    fields["OFFENSE"] = "t";
+    fields["DEFENSE"] = "t";
+  }
+  return fields;
+}
+
+void savePrefs(string[string] fields) {
+  string fileName = file_name_base + "prefs.txt";
+  map_to_file(fields, fileName);
+}
+
+void main(int maxFights){
+  string[string] fields = readPrefs();
   fields["MAX_FIGHTS"] = maxFights;
-  fields["TOTAL"] = "t";
-  fields["OFFENSE"] = "t";
-  fields["DEFENSE"] = "t";
   print_html(process(fields));
 }
