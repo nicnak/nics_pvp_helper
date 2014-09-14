@@ -6,7 +6,7 @@ string playersPattern = "<a href=\"showplayer.php\\?who=\\d+\"><b>(.*?)</b></a> 
 string contestPattern = "<tr[a-zA-Z0-9/=\":. ]*?>\s*?<td[a-zA-Z0-9/=\":. ]*?>\s*?(<img[a-zA-Z0-9/=\":. _]*?>)?\s*?</td>.*?<center>\s*?Round \\d+: <b[a-zA-Z0-9/=\":. ]*?>(.*?)</b>\s*?<div[a-zA-Z0-9/=\":. ]*?>.*?</div>\s*?</center>\s*?<p>(.*?)</td>\s*?<td[a-zA-Z0-9/=\":. ]*?>\s*?(<img[a-zA-Z0-9/=\":. _]*?>)?\s*?</td>\s*?</tr>";
 string marginPattern = ".*?(\\d+%*).*?";
 string this_player = to_lower_case(my_name());
-string greeting = "<H1 style='color:red'>Beta version - 20140913. Please do not distribute. SVN version forthcoming soon.</H1><p>Welcome to <a href=\"showplayer.php\?who=1655960\">NicNak</a>'s PVP tracker. Credit to <a href=\"showplayer.php\?who=2205257\">Vhaeraun<a> for his great bookkeeper which I snagged some bits of code from.";
+string greeting = "<H1 style='color:red'>Beta version - 20140913.</H1><p>Welcome to <a href=\"showplayer.php\?who=1655960\">NicNak</a>'s PVP tracker. Credit to <a href=\"showplayer.php\?who=2205257\">Vhaeraun<a> for his great bookkeeper script which I snagged some bits of code from.";
 
 record WltStat {
   int count;  // win + loss + tie
@@ -66,7 +66,7 @@ string TR(string s){
   return "<tr>" + s + "</tr>";
 }
 
-string formatMiniStat(MiniStat mStat, string mini) {
+string formatMiniStat(MiniStat mStat, string mini, string[string] fields) {
   int totalFights = mStat.offense.count + mStat.defense.count;
   string row = "";
   if (totalFights > 0) {
@@ -75,46 +75,66 @@ string formatMiniStat(MiniStat mStat, string mini) {
     int totalPercent = truncate(to_float(totalWins)/totalFights*100);
 
     row += TD(mini);
-    row += TD(totalFights);
-    row += TD(totalWins + ":" + totalLoss);
-    row += TD(totalPercent + "%");
-    
-    row += TD(mStat.offense.count);
-    if (mStat.offense.count > 0) {
-      int percent = truncate(to_float(mStat.offense.win) / mStat.offense.count * 100);
-      row += TD(mStat.offense.win + ":" + mStat.offense.loss + "(" + mStat.offense.tie + ")");
-      row += TD(percent + "%");
-    } else {
-      row += TD("") + TD("");
+
+    if (fields contains "TOTAL") {
+      row += TD(totalFights);
+      row += TD(totalWins + ":" + totalLoss);
+      row += TD(totalPercent + "%");
     }
-    row += TD(mStat.defense.count);
-    if (mStat.defense.count > 0) {
-      int percent = truncate(to_float(mStat.defense.win + mStat.defense.tie) / mStat.defense.count * 100);
-      row += TD(mStat.defense.win + "(" + mStat.defense.tie + "):" + mStat.defense.loss);
-      row += TD(percent + "%");
-    } else {
-      row += TD("") + TD("");
+
+    if (fields contains "OFFENSE") {
+      row += TD(mStat.offense.count);
+      if (mStat.offense.count > 0) {
+	int percent = truncate(to_float(mStat.offense.win) / mStat.offense.count * 100);
+	row += TD(mStat.offense.win + ":" + mStat.offense.loss + "(" + mStat.offense.tie + ")");
+	row += TD(percent + "%");
+      } else {
+	row += TD("") + TD("");
+      }
+    }
+
+    if (fields contains "DEFENSE") {
+      row += TD(mStat.defense.count);
+      if (mStat.defense.count > 0) {
+	int percent = truncate(to_float(mStat.defense.win + mStat.defense.tie) / mStat.defense.count * 100);
+	row += TD(mStat.defense.win + "(" + mStat.defense.tie + "):" + mStat.defense.loss);
+	row += TD(percent + "%");
+      } else {
+	row += TD("") + TD("");
+      }
     }
   }
   return row;
 }
 
-string formatResults(){
+string formatResults(string[string] fields){
   string html = "<p>";
-  html += "<table border=\"1\" cellspacing=\"5\"><thead>";
-  html += TR("<th>Name</th><th colspan=\"3\">Total</th><th colspan=\"3\">Offense</th><th colspan=\"3\">Defense</th>");
-  html += TR("<th /><th>Count</th><th>W:L</th><th>%</th><th>Count</th><th>W:L(T)</th><th>%</th><th>Count</th><th>W(T):L</th><th>%</th>");
-  html += "</thead><tbody>";
+  html += "<table border='1' cellspacing='4'><thead>";
+  string row1 = "<th rowspan='2'>Mini</th>";
+  string row2 = "";
+  if (fields contains "TOTAL") {
+    row1 += "<th colspan='3'>Total</th>";
+    row2 += "<th>Count</th><th>W:L</th><th>%</th>";
+  }
+  if (fields contains "OFFENSE") {
+    row1 += "<th colspan='3'>Offense</th>";
+    row2 += "<th>Count</th><th>W:L(T)</th><th>%</th>";
+  }
+  if (fields contains "DEFENSE") {
+    row1 += "<th colspan='3'>Defense</th>";
+    row2 += "<th>Count</th><th>W(T):L</th><th>%</th>";
+  }
+  html += TR(row1) + TR(row2) + "</thead><tbody>";
 
   foreach mini in player_stat.minis{
     MiniStat mStat = player_stat.minis[mini];
-    string row = formatMiniStat(mStat, mini);
+    string row = formatMiniStat(mStat, mini, fields);
     if (row != "") {
       html += TR(row);
     }
   }
   html += "</body><tfoot>";
-  html += TR(formatMiniStat(player_stat.overall, "Total Fights"));
+  html += TR(formatMiniStat(player_stat.overall, "Total Fights", fields));
   html += "</tfoot></table>";
   return html;
 }
@@ -183,12 +203,12 @@ StoredFight processFight(string url) {
   return thisFight;
 }
 
-void evaluateStoredFight(StoredFight thisFight){
+void evaluateStoredFight(StoredFight thisFight) {
   // For each of the rounds, gather per-mini stats
-  foreach key in thisFight.rounds{
+  foreach key in thisFight.rounds {
     StoredRound thisRound = thisFight.rounds[key];
     MiniStat mStat = player_stat.minis[thisRound.mini];
-    if(thisFight.attacking){
+    if(thisFight.attacking) {
       mStat.offense = incrementWltStat(mStat.offense, thisRound);
     } else {
       mStat.defense = incrementWltStat(mStat.defense, thisRound);
@@ -207,8 +227,9 @@ void evaluateStoredFight(StoredFight thisFight){
   }
 }
 
-string process(int maxFights) {
+string process(string[string] fields) {
   verifySettings();
+  int maxFights = to_int(fields["MAX_FIGHTS"]);
 
   string fileName = this_player + "_nics_pvp_tracker_" + getCurrentSeason() + ".txt";
   StoredFight [string] storedFights;
@@ -220,7 +241,7 @@ string process(int maxFights) {
   int i=0;
   while (logMatcher.find() && i < maxFights) {
     i += 1;
-    string oneFight=group(logMatcher,1);
+    string oneFight = group(logMatcher,1);
     string fightId = group(logMatcher,2);
     string fightResults = group(logMatcher,3);
 		
@@ -233,11 +254,16 @@ string process(int maxFights) {
 
   string page;
   page += greeting;
-  page += "<p>PvPStats for " + i + " fights";
-  page += formatResults();
+  page += "<p>PvP Stats for " + i + " fights";
+  page += formatResults(fields);
   return page;
 }
 
 void main(int maxFights){
-  print_html(process(maxFights));
+  string[string] fields;
+  fields["MAX_FIGHTS"] = maxFights;
+  fields["TOTAL"] = "t";
+  fields["OFFENSE"] = "t";
+  fields["DEFENSE"] = "t";
+  print_html(process(fields));
 }
