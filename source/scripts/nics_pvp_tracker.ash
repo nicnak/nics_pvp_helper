@@ -24,7 +24,8 @@ record PlayerStat {
   int[string] lootStolen;
   int[string] lootLost;
   int fameTaken;
-  int fame;
+  int oFame;
+  int dFame;
   int swagger;
   int flowers;
   int stats;
@@ -180,17 +181,18 @@ string formatResults(string[string] fields) {
       countLootMap(player_stat.lootStolen) + " pieces of loot. " +
       "Lost " + player_stat.stats + " stats and " +
       countLootMap(player_stat.lootLost) + " pieces of loot. " +
-      "Your overall fame changed by " + player_stat.fame  + ".";
+      "Your overall fame changed by " + (player_stat.oFame + player_stat.dFame) + ".";
 
     html += "<p><table><tbody>";
     html += "<tr><th colspan='2'>Average per Attack</th></tr>";
     html += "<tr><td>Fame Taken</td><td>" + formatAvg(player_stat.fameTaken, oFights) + "</td></tr>";
+    html += "<tr><td>Fame</td><td>" + formatAvg(player_stat.oFame, oFights) + "</td></tr>";
     html += "<tr><td>Flowers</td><td>" + formatAvg(player_stat.flowers, oFights) + "</td></tr>";
     html += "<tr><td>Swagger</td><td>" + formatAvg(player_stat.swagger, oFights) + "</td></tr>";
     html += "<tr><td>Stats</td><td>" + formatAvg(player_stat.stats, oFights) + "</td></tr>";
     html += "<tr><td>Phat Loots</td><td>" + formatAvg(countLootMap(player_stat.lootStolen), oFights) + "</td></tr>";
     html += "<tr><th colspan='2'>Average per Defend</th></tr>";
-    html += "<tr><td>Fame</td><td>" + formatAvg(player_stat.fame - player_stat.fameTaken, dFights) + "</td></tr>";
+    html += "<tr><td>Fame</td><td>" + formatAvg(player_stat.dFame, dFights) + "</td></tr>";
     html += "<tr><td>Phat Loots</td><td>" + formatAvg(countLootMap(player_stat.lootLost) * -1.0, dFights) + "</td></tr>";
     html += "</tbody></table>";
   }
@@ -290,9 +292,13 @@ void accumulateRewardStats(string rewardStr, boolean attacking) {
   m = create_matcher("([+-]\\d+)&nbsp;Fame", rewardStr);
   if (m.find()) {
     int fame = to_int(m.group(1));
-    player_stat.fame += fame;
     if (attacking) {
-      player_stat.fameTaken += fame;
+      player_stat.oFame += fame;
+      if (fame > 0) {
+	player_stat.fameTaken += fame;
+      }
+    } else {
+      player_stat.dFame += fame;
     }
   }
 
