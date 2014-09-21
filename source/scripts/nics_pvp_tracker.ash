@@ -20,7 +20,14 @@ record MiniStat {
 };
 record PlayerStat {
   MiniStat overall;  // Sum of minis array, ignoring ties.
-  MiniStat [string] minis;
+  MiniStat[string] minis;
+  int[string] lootStolen;
+  int[string] lootLost;
+  int fameTaken;
+  int fame;
+  int swagger;
+  int flowers;
+  int stats;
 };
 PlayerStat player_stat;
 
@@ -36,7 +43,7 @@ record StoredFight{
   string defender;
   boolean attacking;  // true if attacker == this_player
   boolean won;  // true if this_player won
-  StoredRound [string] rounds;
+  StoredRound[string] rounds;
 };
 
 boolean isCompact() {
@@ -119,7 +126,15 @@ string formatMiniStat(MiniStat mStat, string mini, string[string] fields) {
   return row;
 }
 
-string formatResults(string[string] fields){
+int countLootMap(int[string] loot) {
+  int count = 0;
+  foreach key in loot {
+    count += loot[key];
+  }
+  return count;
+}
+
+string formatResults(string[string] fields) {
   string html = "<p>";
   html += "<table border='1' cellpadding='2' cellspacing='2'><thead>";
   string row1 = "<th rowspan='2'>Mini</th>";
@@ -145,9 +160,21 @@ string formatResults(string[string] fields){
       html += TR(row);
     }
   }
-  html += "</body><tfoot>";
+  html += "</tbody><tfoot>";
   html += TR(formatMiniStat(player_stat.overall, "Total Fights", fields));
   html += "</tfoot></table>";
+
+  int oFights = player_stat.overall.offense.count;
+  int dFights = player_stat.overall.defense.count;
+  int tFights = oFights + dFights;
+  if (tFights > 0) {
+    html += "<p>Stole " + player_stat.fameTaken + " fame, " +
+      player_stat.flowers + " flowers, and " +
+      countLootMap(player_stat.lootStolen) + " pieces of loot.<br>\n";
+    html += "Lost " + player_stat.stats + " stats and " +
+      countLootMap(player_stat.lootLost) + " pieces of loot.";
+  }
+
   return html;
 }
 
@@ -214,7 +241,7 @@ StoredFight processFight(string url) {
   return thisFight;
 }
 
-void evaluateStoredFight(StoredFight thisFight) {
+void accumulateMiniStats(StoredFight thisFight) {
   // For each of the rounds, gather per-mini stats
   foreach key in thisFight.rounds {
     StoredRound thisRound = thisFight.rounds[key];
@@ -238,12 +265,49 @@ void evaluateStoredFight(StoredFight thisFight) {
   }
 }
 
+void accumulateRewardStats(string rewardStr, boolean attacking) {
+  matcher m;
+  m = create_matcher("([+-]\\d+)&nbsp;Fame", rewardStr);
+  if (m.find()) {
+    int fame = to_int(m.group(1));
+    player_stat.fame += fame;
+    if (attacking) {
+      player_stat.fameTaken += fame;
+    }
+  }
+
+  m = create_matcher("[+](\\d+)&nbsp;Swagger", rewardStr);
+  if (m.find()) {
+    player_stat.swagger += to_int(m.group(1));
+  }
+
+  m = create_matcher("[+](\\d+)&nbsp;Flower", rewardStr);
+  if (m.find()) {
+    player_stat.flowers += to_int(m.group(1));
+  }
+
+  m = create_matcher("([-]\\d+)&nbsp;Stats", rewardStr);
+  if (m.find()) {
+    player_stat.stats += to_int(m.group(1));
+  }
+
+  m = create_matcher("Lost&nbsp;(.*)", rewardStr);
+  if (m.find()) {
+    player_stat.lootLost[m.group(1)] += 1;
+  }
+
+  m = create_matcher("Stole&nbsp;(.*)", rewardStr);
+  if (m.find()) {
+    player_stat.lootStolen[m.group(1)] += 1;
+  }
+}
+
 string process(string[string] fields) {
   verifySettings();
   int maxFights = to_int(fields["MAX_FIGHTS"]);
 
   string fileName = file_name_base + getCurrentSeason() + ".txt";
-  StoredFight [string] storedFights;
+  StoredFight[string] storedFights;
   file_to_map(fileName, storedFights);
 
   string archive = visit_url("peevpee.php?place=logs&mevs=0&oldseason=0&showmore=1");
@@ -256,7 +320,6 @@ string process(string[string] fields) {
     string oneFight = group(logMatcher,1);
     string fightId = group(logMatcher,2);
     string fightReward = group(logMatcher,3);
-    //print("FR " + fightReward + "\n");
 
     if (!(storedFights contains fightId)) {
       storedFights[fightId] = processFight(oneFight);
@@ -267,8 +330,10 @@ string process(string[string] fields) {
 	playerRestrict != storedFights[fightId].defender) {
       continue;
     }
-    evaluateStoredFight(storedFights[fightId]);
+
     fightsMatched += 1;
+    accumulateMiniStats(StoredFights[fightId]);
+    accumulateRewardStats(fightReward, StoredFights[fightId].attacking);
   }
   map_to_file(storedFights, fileName);
 
