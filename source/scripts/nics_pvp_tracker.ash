@@ -121,7 +121,7 @@ string formatMiniStat(MiniStat mStat, string mini, string[string] fields) {
 
 string formatResults(string[string] fields){
   string html = "<p>";
-  html += "<table border='1' cellspacing='4'><thead>";
+  html += "<table border='1' cellpadding='2' cellspacing='2'><thead>";
   string row1 = "<th rowspan='2'>Mini</th>";
   string row2 = "";
   if (fields contains "TOTAL") {
@@ -249,9 +249,10 @@ string process(string[string] fields) {
   string archive = visit_url("peevpee.php?place=logs&mevs=0&oldseason=0&showmore=1");
 
   matcher logMatcher = create_matcher(viewPattern, archive); 
-  int i=0;
-  while (logMatcher.find() && i < maxFights) {
-    i += 1;
+  int fightCount = 0;
+  int fightsMatched = 0;
+  while (logMatcher.find() && fightCount < maxFights) {
+    fightCount += 1;
     string oneFight = group(logMatcher,1);
     string fightId = group(logMatcher,2);
     string fightReward = group(logMatcher,3);
@@ -267,12 +268,16 @@ string process(string[string] fields) {
       continue;
     }
     evaluateStoredFight(storedFights[fightId]);
+    fightsMatched += 1;
   }
   map_to_file(storedFights, fileName);
 
   string page;
   page += greeting;
-  page += "<p>PvP Stats for " + i + " fights";
+  page += "<p>PvP Stats for the most recent " + fightCount + " fights";
+  if (fightsMatched != fightCount) {
+    page += "<br>Filter matched " + fightsMatched + " fights";
+  }
   page += formatResults(fields);
   return page;
 }
