@@ -26,13 +26,14 @@ void main() {
   write("Fights to process: <input type='text' name='MAX_FIGHTS' value='" +
 	fields["MAX_FIGHTS"] + "' size=5 /></br>");
   string checked;
+  write("Display options: ");
   if (fields contains "TOTAL") { checked = "checked"; } else { checked = ""; }
-  write("<input type='checkbox' name='TOTAL' value='t' " + checked + " />Total");
+  write("Total<input type='checkbox' name='TOTAL' value='t' " + checked + " /> ");
   if (fields contains "OFFENSE") { checked = "checked"; } else { checked = ""; }
-  write("<input type='checkbox' name='OFFENSE' value='t' " + checked + " />Offense");
+  write("Offense<input type='checkbox' name='OFFENSE' value='t' " + checked + " /> ");
   if (fields contains "DEFENSE") { checked = "checked"; } else { checked = ""; }
-  write("<input type='checkbox' name='DEFENSE' value='t' " + checked + " />Defense<br>");
-  write("Restrict to player: <input type='text' name='PLAYER_RESTRICT' value='" +
+  write("Defense<input type='checkbox' name='DEFENSE' value='t' " + checked + " /><br>");
+  write("Filters: player name<input type='text' name='PLAYER_RESTRICT' value='" +
 	fields["PLAYER_RESTRICT"] + "' size=10 /></br>");
 
   write("<input type='submit' value='Recalculate'/></form>");

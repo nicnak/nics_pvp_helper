@@ -134,6 +134,13 @@ int countLootMap(int[string] loot) {
   return count;
 }
 
+string formatAvg(float top, int bottom) {
+  if (bottom == 0) {
+    return "";
+  }
+  return "" + round(100.0 * top / bottom) / 100.0;
+}
+
 string formatResults(string[string] fields) {
   string html = "<p>";
   html += "<table border='1' cellpadding='2' cellspacing='2'><thead>";
@@ -168,11 +175,24 @@ string formatResults(string[string] fields) {
   int dFights = player_stat.overall.defense.count;
   int tFights = oFights + dFights;
   if (tFights > 0) {
-    html += "<p>Stole " + player_stat.fameTaken + " fame, " +
+    html += "<p>You stole " + player_stat.fameTaken + " fame, " +
       player_stat.flowers + " flowers, and " +
-      countLootMap(player_stat.lootStolen) + " pieces of loot.<br>\n";
-    html += "Lost " + player_stat.stats + " stats and " +
-      countLootMap(player_stat.lootLost) + " pieces of loot.";
+      countLootMap(player_stat.lootStolen) + " pieces of loot. " +
+      "Lost " + player_stat.stats + " stats and " +
+      countLootMap(player_stat.lootLost) + " pieces of loot. " +
+      "Your overall fame changed by " + player_stat.fame  + ".";
+
+    html += "<p><table><tbody>";
+    html += "<tr><th colspan='2'>Average per Attack</th></tr>";
+    html += "<tr><td>Fame Taken</td><td>" + formatAvg(player_stat.fameTaken, oFights) + "</td></tr>";
+    html += "<tr><td>Flowers</td><td>" + formatAvg(player_stat.flowers, oFights) + "</td></tr>";
+    html += "<tr><td>Swagger</td><td>" + formatAvg(player_stat.swagger, oFights) + "</td></tr>";
+    html += "<tr><td>Stats</td><td>" + formatAvg(player_stat.stats, oFights) + "</td></tr>";
+    html += "<tr><td>Phat Loots</td><td>" + formatAvg(countLootMap(player_stat.lootStolen), oFights) + "</td></tr>";
+    html += "<tr><th colspan='2'>Average per Defend</th></tr>";
+    html += "<tr><td>Fame</td><td>" + formatAvg(player_stat.fame - player_stat.fameTaken, dFights) + "</td></tr>";
+    html += "<tr><td>Phat Loots</td><td>" + formatAvg(countLootMap(player_stat.lootLost) * -1.0, dFights) + "</td></tr>";
+    html += "</tbody></table>";
   }
 
   return html;
