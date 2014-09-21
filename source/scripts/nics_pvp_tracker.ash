@@ -4,7 +4,6 @@ notify nicnak;
 string viewPattern = "a href\=\"(peevpee\.php\\?action\=log.*?lid\=(\\d+).*?)\".*?m</small></td><td><small>(.*?)</small>";
 string playersPattern = "<a href=\"showplayer.php\\?who=\\d+\"><b>(.*?)</b></a> calls out <a href=\"showplayer.php\\?who=\\d+\"><b>(.*?)</b></a> for battle!";		
 string contestPattern = "<tr[a-zA-Z0-9/=\":. ]*?>\s*?<td[a-zA-Z0-9/=\":. ]*?>\s*?(<img[a-zA-Z0-9/=\":. _]*?>)?\s*?</td>.*?<center>\s*?Round \\d+: <b[a-zA-Z0-9/=\":. ]*?>(.*?)</b>\s*?<div[a-zA-Z0-9/=\":. ]*?>.*?</div>\s*?</center>\s*?<p>(.*?)</td>\s*?<td[a-zA-Z0-9/=\":. ]*?>\s*?(<img[a-zA-Z0-9/=\":. _]*?>)?\s*?</td>\s*?</tr>";
-string marginPattern = ".*?(\\d+%*).*?";
 string this_player = to_lower_case(my_name());
 string greeting = "<p>Welcome to <a href=\"showplayer.php\?who=1655960\">NicNak</a>'s PVP tracker. Credit to <a href=\"showplayer.php\?who=2205257\">Vhaeraun<a> for his great bookkeeper script which I snagged some bits of code from.";
 string file_name_base = this_player + "_nics_pvp_tracker_";
@@ -60,11 +59,23 @@ string getCurrentSeason() {
   return group(m, 1);
 }
 
-string TD(string s){
-  return "<td>" + s + "</td>";
+string TR(string s) {
+  return "<tr>" + s + "</tr>\n";
 }
-string TR(string s){
-  return "<tr>" + s + "</tr>";
+
+string miniStatStyle(int percent) {
+  string color = "#000000";
+  if (percent < 20) {
+    color = "#d73027";
+  } else if (percent < 40) {
+    color = "#fc8d59";
+  } else if (percent < 60) {
+    color = "#91bfdb";
+  } else if (percent < 80) {
+    color = "#4575b4";
+  }
+
+  return "style='color:" + color + "'";
 }
 
 string formatMiniStat(MiniStat mStat, string mini, string[string] fields) {
@@ -75,33 +86,33 @@ string formatMiniStat(MiniStat mStat, string mini, string[string] fields) {
     int totalLoss = mStat.offense.loss + mStat.defense.loss + mStat.offense.tie;
     int totalPercent = truncate(to_float(totalWins)/totalFights*100);
 
-    row += TD(mini);
+    row += "<td>" + mini + "</td>";
 
     if (fields contains "TOTAL") {
-      row += TD(totalFights);
-      row += TD(totalWins + ":" + totalLoss);
-      row += TD(totalPercent + "%");
+      row += "<td>" + totalFights + "</td>";
+      row += "<td>" + totalWins + ":" + totalLoss + "</td>";
+      row += "<td " + miniStatStyle(totalPercent) + ">" + totalPercent + "%</td>";
     }
 
     if (fields contains "OFFENSE") {
-      row += TD(mStat.offense.count);
+      row += "<td>" + mStat.offense.count + "</td>";
       if (mStat.offense.count > 0) {
 	int percent = truncate(to_float(mStat.offense.win) / mStat.offense.count * 100);
-	row += TD(mStat.offense.win + ":" + mStat.offense.loss + "(" + mStat.offense.tie + ")");
-	row += TD(percent + "%");
+	row += "<td>" + mStat.offense.win + ":" + mStat.offense.loss + "(" + mStat.offense.tie + ")</td>";
+	row += "<td " + miniStatStyle(percent) + ">" + percent + "%</td>";
       } else {
-	row += TD("") + TD("");
+	row += "<td></td><td></td>";
       }
     }
 
     if (fields contains "DEFENSE") {
-      row += TD(mStat.defense.count);
+      row += "<td>" + mStat.defense.count + "</td>";
       if (mStat.defense.count > 0) {
 	int percent = truncate(to_float(mStat.defense.win + mStat.defense.tie) / mStat.defense.count * 100);
-	row += TD(mStat.defense.win + "(" + mStat.defense.tie + "):" + mStat.defense.loss);
-	row += TD(percent + "%");
+	row += "<td>" + mStat.defense.win + "(" + mStat.defense.tie + "):" + mStat.defense.loss + "</td>";
+	row += "<td " + miniStatStyle(percent) + ">" + percent + "%</td>";
       } else {
-	row += TD("") + TD("");
+	row += "<td></td><td></td>";
       }
     }
   }
@@ -243,7 +254,8 @@ string process(string[string] fields) {
     i += 1;
     string oneFight = group(logMatcher,1);
     string fightId = group(logMatcher,2);
-    string fightResults = group(logMatcher,3);
+    string fightReward = group(logMatcher,3);
+    //print("FR " + fightReward + "\n");
 
     if (!(storedFights contains fightId)) {
       storedFights[fightId] = processFight(oneFight);
